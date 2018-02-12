@@ -1,0 +1,1431 @@
+package sparql;
+
+import org.apache.jena.fuseki.*; 
+ 
+ 
+import com.hp.hpl.jena.query.Query; 
+import com.hp.hpl.jena.query.QueryExecution; 
+import com.hp.hpl.jena.query.QueryExecutionFactory; 
+import com.hp.hpl.jena.query.QueryFactory; 
+import com.hp.hpl.jena.query.ResultSet; 
+import com.hp.hpl.jena.rdf.model.Model; 
+import com.hp.hpl.jena.update.UpdateExecutionFactory; 
+import com.hp.hpl.jena.update.UpdateFactory; 
+import com.hp.hpl.jena.update.UpdateProcessor; 
+import com.hp.hpl.jena.update.UpdateRequest; 
+ 
+
+public class FusekiClient { 
+
+   
+    
+  public static final String MODE_SELECT = "SELECT"; 
+
+   
+    
+  private static final String NONE_GRAPH_SPECIFIED = ""; 
+
+   
+    
+  public static String ENDPOINT_QUERY = "/query"; 
+
+   
+    
+  public static String ENDPOINT_UPDATE = "/update"; 
+
+   
+    
+  public static String ENDPOINT_DATA = "/data"; 
+
+   
+    
+  public static String DEFAULT_NAMED_MODEL = "default"; 
+  private static FusekiClient instance; 
+   
+
+   
+   
+    
+  public static FusekiClient getInstance() { 
+    if(instance == null) { 
+      return new FusekiClient(); 
+    } 
+    return instance; 
+  } 
+
+   
+   
+   
+   
+    
+  public ResultSet performSelect(final String datasetUrl, final String queryCommand) { 
+    // perform a query on an unspecified (default) graph 
+    return performSelect(datasetUrl, queryCommand, NONE_GRAPH_SPECIFIED);    
+  } 
+   
+
+   
+   
+   
+   
+   
+    
+  public ResultSet performSelect(final String datasetUrl, final String queryCommand, final String defaultGraphUri) { 
+     final String pathToQueryEndpoint = datasetUrl+ENDPOINT_QUERY; 
+     return queryServerWithDefaultGraph(pathToQueryEndpoint, queryCommand, MODE_SELECT, defaultGraphUri);         
+  } 
+ 
+
+   
+   
+   
+   
+   
+   
+    
+  private ResultSet queryServerWithDefaultGraph(final String pathToQueryEndpoint, final String queryCommand, final String resultFormat, final String defaultGraph) { 
+    Query q = QueryFactory.create(queryCommand); 
+    QueryExecution queryEx = QueryExecutionFactory.sparqlService(pathToQueryEndpoint, q, defaultGraph); 
+    if(resultFormat.equals(MODE_SELECT)) { 
+      ResultSet results = queryEx.execSelect(); // SELECT returns a ResultSet 
+      return results;     
+    }  
+    return null;     
+  } 
+ 
+
+   
+   
+   
+   
+   
+    
+  public void putModel(final String url, final Model model, final String modelName) { 
+    String pathToQueryEndpoint = url+ENDPOINT_DATA; 
+    DatasetAccessor accessor = DatasetAccessorFactory.createHTTP(pathToQueryEndpoint); 
+    accessor.putModel(modelName, model); 
+  } 
+   
+
+   
+   
+   
+    
+  public void performUpdate(final String datasetUrl, final String updateCommand) { 
+    String pathToUpdateEndpoint = datasetUrl+ENDPOINT_UPDATE; 
+    UpdateRequest request = UpdateFactory.create(updateCommand); 
+    UpdateProcessor proc = UpdateExecutionFactory.createRemote(request, pathToUpdateEndpoint); 
+    proc.execute(); // perform the update 
+  } 
+   
+  public void deleteRecord(Model model, String command) { 
+     
+  } 
+}
+
+/*
+ 
+ 
+ 
+ 
+
+
+package parse;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.rdf.model.ModelFactory;  
+import com.hp.hpl.jena.rdf.model.RDFNode;  
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.vocabulary.RDFS;
+import com.hp.hpl.jena.vocabulary.VCARD;  
+
+
+  
+public class AddDeleteOWL {  
+    public static void main(String[] args) {
+        // create the model and import owl file
+        OntModel ontModel = ModelFactory.createOntologyModel( OntModelSpec.OWL_MEM, null );
+     try
+     {
+  	   ontModel.read(new FileInputStream("D:\\Fruits-lite.owl"),"");
+     }
+     catch(IOException ioe)
+     {
+            System.err.println(ioe.toString());
+     }
+     
+
+      
+        String testURI = "http://www.360iii.org/ontologies/fruit#OWLClass_56ef58aa_adf0_4329_9442_8f6fa51870cd"; 
+     
+        
+        Resource test = ontModel.createResource(testURI);  
+        test.addProperty(RDFS.label, ontModel.createLiteral("测试呢", "zh")); 
+        test.addProperty(RDFS.label, ontModel.createLiteral("test", "en")); 
+
+                    ontModel.createResource()  
+                        .addProperty(RDFS.label, ontModel.createLiteral("Fuck，Why so hard!", "zh"))
+                        .addProperty(RDFS.label, ontModel.createLiteral("you are crazy", "en"));   
+  
+        System.out.println("/r/n原始内容：");  
+        ontModel.write(System.out);  
+        
+     
+        ontModel.remove(ontModel.listStatements(null, RDFS.label, (RDFNode)null));  
+        ontModel.removeAll(null, RDFS.label, (RDFNode)null);  
+          
+        System.out.println("\n删除后的内容：");  
+        ontModel.write(System.out);  
+
+        ontModel.add(test, VCARD.N, ontModel.createResource()  
+        		.addProperty(RDFS.label, ontModel.createLiteral("Fuck，Why so hard!", "zh"))
+        		.addProperty(RDFS.label, ontModel.createLiteral("you are crazy", "en")));   
+        System.out.println("\n重新增加后的内容：");  
+        ontModel.write(System.out);  
+    }  
+
+}  
+
+
+
+package parse;
+
+import java.io.FileInputStream;
+
+import java.io.IOException;
+import com.hp.hpl.jena.ontology.OntClass;
+import com.hp.hpl.jena.ontology.OntDocumentManager;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.ontology.OntProperty;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.NodeIterator;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.ResIterator;
+import com.hp.hpl.jena.vocabulary.RDF; 
+
+
+
+
+public class AddDeleteQueryOWL {
+	       public static void main(String[] args) {
+	              // create the model and import owl file
+	              OntModel ontModel = ModelFactory.createOntologyModel( OntModelSpec.OWL_MEM, null );
+	           try
+	           {
+	        	   ontModel.read(new FileInputStream("D:\\Fruits-lite.owl"),"");
+	           }
+	           catch(IOException ioe)
+	           {
+	                  System.err.println(ioe.toString());
+	           }
+	           
+	           OntDocumentManager dm = ontModel.getDocumentManager();
+	           
+
+	           
+	           OntClass cls = ontModel.createClass("http://www.360iii.org/ontologies/fruit#OWLClass_dfe66630_50bb_4596_b79e_ab2e457d5a06");   
+	           cls.addLabel("测试class", "zh");
+	           
+	           OntClass oc = ontModel.getOntClass("http://www.360iii.org/ontologies/fruit#OWLClass_dfe66630_50bb_4596_b79e_ab2e297d5a06");
+	           oc.addEquivalentClass(cls); 
+	           System.out.print("新加类的中文label是："+cls.getLabel("zh")+"\r\n");
+	       
+	           System.out.print("新加类cls的URI是："+cls.getURI()+"\r\n");
+	           System.out.print("新加类oc的URIl是："+oc.getURI()+"\r\n");
+	           
+	           
+	         
+
+	       	//list everyone in the model who has a child;
+	        Property p1 =ontModel.getProperty("http://www.360iii.org/ontologies/fruit#OWLObjectProperty_370f6e23_1161_40a8_8046_c3e0ac331d4e");
+	        OntProperty op1 = (OntProperty) p1.as( OntProperty.class );
+	        
+	       	ResIterator r1 = ontModel.listSubjectsWithProperty(RDF.type,op1);
+	       	//Because subjects of statements are Resources, the method returned a ResIterator
+	       	System.out.println("\r\n"+op1.getLabel("zh")+"  的所有subject有：");
+
+	       	while (r1.hasNext()){
+//	       		//ResIterator has a typed nextResource() met hold
+	       		Resource o1 = r1.nextResource();
+//	       		//Print the URI of the resource
+	       		System.out.println(o1.getURI());
+//	       		
+//	       		//can also find all the parents by getting the objects of all"childOf" statements.
+//	       		//Objects of statements could be Resources or literals,so the Iterator returned
+//	       		//contains RDFNodes
+
+	       	}
+	         
+	       	
+	       	
+//	           
+	    	//Objects of statements could be Resources or literals,so the Iterator returned
+	    	//contain RDFNodes
+	       	Property p2 =ontModel.getProperty("http://www.360iii.org/ontologies/fruit#OWLObjectProperty_c0511a91_343e_4539_8707_d9000d45e033");
+	       	OntProperty op2 = (OntProperty) p2.as( OntProperty.class );
+	    	NodeIterator ni1 = ontModel.listObjectsOfProperty(RDF.type);
+//	    	//to find all the siblings of a specific person,the model itself can be required
+	    	System.out.println("\r\n"+op2.getLabel("zh")+"  的所有subject有：");
+	    	while (ni1.hasNext()){
+	    		RDFNode object = ni1.nextNode();
+	    		System.out.println(object.getClass());
+	    	}
+//  
+	           
+	           
+	           
+	           
+	           
+	           
+	           
+	           
+	           /*
+	            
+	            
+	            
+	              
+////	           public static void getClasses(OntModel ontModel) {  
+//	               for (ExtendedIterator<OntClass> ei = ontModel.listClasses(); ei.hasNext();) {  
+//	                   OntClass oc = ei.next();  
+//	                   System.out.println(oc.getLocalName());  
+//	                   for (ExtendedIterator<OntProperty> eip = oc  
+//	                           .listDeclaredProperties(); eip.hasNext();) {  
+//	                       OntProperty op = eip.next();  
+//	                       System.out.println(op.getLocalName());  
+//	                   }  
+//	               }  
+////	           }  
+	           
+	           
+	      
+//	     
+//	           for (Iterator i = ontModel.listClasses(); i.hasNext();) {
+//	           OntClass c = (OntClass) i.next(); // 返回类型强制转换
+//	           		if (!c.isAnon()) { // 如果不是匿名类，则打印类的名字
+//	           			System.out.print("Class:");	           			
+//	        
+//	           			System.out.println(c.getLabel("zh"));
+//	           				for (Iterator j = ontModel.listObjectProperties(); j.hasNext();) {
+//	           					OntProperty op = (OntProperty) j.next();  
+//	           					System.out.print("Property:");
+//	           		            System.out.println(op.getLabel("zh"));  
+//	           				}
+//	 	           }
+	           				
+	                   				
+	           				
+	           				
+	           
+	           
+	           
+//	           public static void printModel(OntModel ontModel) {  
+//	        	    for (Iterator<OntClass><span style="font-family: 'Myriad Pro';"> i = ontModel.listClasses(); i.hasNext();) {</span>  
+//	        	        OntClass oc = i.next();  
+//	        	        System.out.println(oc.getLocalName());  
+//	        	    }  
+	           
+	           
+//	        	    
+	        	    
+	           		
+//	           	public static void getClasses(OntModel ontModel) {  
+//	           		   for (ExtendedIterator<OntClass> ei = ontModel.listClasses(); ei.hasNext();) {  
+//	           		       OntClass ot = ei.next();  
+//	           		       System.out.println(oc.getLocalName());  
+//	           		       for (ExtendedIterator<OntProperty> eip = ot  
+//	           		                .listDeclaredProperties(); eip.hasNext();) {  
+//	           		           OntProperty op = eip.next();  
+//	           		           System.out.println(op.getLocalName());  
+//	           		       }  
+//	           		   }  
+//	           	}  	           		
+	           		
+	           		
+	           		
+	           		
+	           
+//	           if(c.getLabel("zh").equals(oc.getLabel("zh"))){
+//	        	   System.out.println("URI@"+c.getURI());
+////	           		System.out.println("水果类的等价类");	
+//           			System.out.println(c.getLocalName());		
+//		       }                       
+//		       } 
+	                    
+	           
+		// TODO Auto-generated method stub
+//	   	OntModel ontModel = ModelFactory.createOntologyModel();
+//	   	ontModel.read("D:\\wine.Owl");
+//		String NS = "http://example.com/test/";
+//		
+//		Resource r = m.createResource(NS + "r");
+//		Property t = m.createProperty(NS + "t");		
+//		
+//		r.addProperty(t, "hello world",XSDDatatype.XSDstring);
+//		m.write(System.out, "Turtle");
+		
+	}
+
+
+}
+ /*
+  
+  *http://wenku.baidu.com/link?url=OMsZaKhA6sNkusWOMFRTDljmTKJyPTs-iptFV25-CnMMfitrCmLsn5m9LArEeaPfyKEj3iljU2tIFV3qtFiGHiUHMno8_YorwbgvRJqcVry
+  *
+  *
+  
+  
+  
+
+
+package parse;
+
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.NodeIterator;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.ResIterator;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
+
+
+public class CreateQueryOWL {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		
+		//URI declarations
+		String familyUri = "http://family/";
+		String relationshipUri = "http://purl.org/vocab/relationship/";
+		
+		//Creat an empty Model
+		Model model = ModelFactory.createDefaultModel();
+		
+		//Creat a Resource for each family number
+		Resource adam = model.createResource(familyUri+"adam");
+		Resource beth = model.createResource(familyUri+"beth");		
+		Resource chunk = model.createResource(familyUri+"chunk");		
+		Resource dotty = model.createResource(familyUri+"dotty");		
+	
+		//and so on for other family numbers 
+		//Create properties for the different types of relationship to represent
+		
+		Property childOf = model.createProperty(relationshipUri,"childOf");
+		Property parentOf = model.createProperty(relationshipUri,"parentOf");
+		Property siblingOf = model.createProperty(relationshipUri,"siblingOf");
+		Property spouseOf = model.createProperty(relationshipUri,"spouseOf");
+		
+		//add properties to adam describing relationships to other family numbers
+		adam.addProperty(siblingOf, beth);
+		adam.addProperty(spouseOf, dotty);
+		adam.addProperty(parentOf, beth);
+		
+		//can also create statement directly...
+		Statement statement = model.createStatement(adam,parentOf,"fran");
+		
+		//add the created statement to the model
+		model.add(statement);
+		
+
+
+
+	//list everyone in the model who has a child;
+	ResIterator parents = model.listSubjectsWithProperty(parentOf);
+	//Because subjects of statements are Resources, the method returned a ResIterator
+	System.out.println("\r\n家庭模型中的所有subject有：");
+	while (parents.hasNext()){
+		//ResIterator has a typed nextResource() met hold
+		Resource person = parents.nextResource();
+		//Print the URI of the resource
+		System.out.println(person.getURI());
+		
+		//can also find all the parents by getting the objects of all"childOf" statements.
+		//Objects of statements could be Resources or literals,so the Iterator returned
+		//contains RDFNodes
+
+	}
+		
+		
+
+
+	//Objects of statements could be Resources or literals,so the Iterator returned
+	//contain RDFNodes
+	NodeIterator moreParents = model.listObjectsOfProperty(parentOf);
+	//to find all the siblings of a specific person,the model itself can be required
+	System.out.println("\r\n家庭模型中的所有object有：");
+	while (moreParents.hasNext()){
+		RDFNode object = moreParents.nextNode();
+		System.out.println(object);
+	}
+
+	
+
+	
+	//To find all the siblings of a specific person,the model itself can be queried
+			
+	StmtIterator stmtparent = model.listStatements();
+	System.out.println("\r\n家庭模型中的所有statements有：");
+	while (stmtparent.hasNext()){
+		Statement s = stmtparent.nextStatement();
+		System.out.println(s.getSubject());
+		System.out.println(s.getPredicate());
+		System.out.println(s.getObject());
+	}
+	
+	
+////Find the exact statement"adam is a spouse of dotty"
+	StmtIterator o =model.listStatements(adam, spouseOf, dotty);
+	System.out.println("\r\n此statement是否存在？");
+	while(o.hasNext()){
+		Statement s = o.nextStatement();
+		System.out.println("此statement存在");
+	}
+	
+//Find all the statements with adam as the subject and dotty as the object
+	StmtIterator p =model.listStatements(adam, null, dotty);
+	System.out.println("\r\n此statement的谓词是：");
+	while(p.hasNext()){
+		Statement s1 = p.nextStatement();
+		System.out.println(s1.getPredicate());
+	}		
+	
+//Find any statements made about adam
+	StmtIterator q =model.listStatements(adam, null, (RDFNode)null);
+	System.out.println("\r\n与Adam有关系的statement有：");
+	while(q.hasNext()){
+		Statement s2 = q.nextStatement();
+		System.out.println(s2.getPredicate()+"  "+s2.getObject());
+	}		
+	
+
+//find any statement with the siblingOf property
+	StmtIterator r =model.listStatements(null, siblingOf, (RDFNode)null);
+	System.out.println("\r\n具有sibling关系的有：");
+	while(r.hasNext()){
+		Statement s3 = r.nextStatement();
+		System.out.println(s3.getSubject()+"  和  "+s3.getObject());
+
+	}		
+	
+	}
+}
+package parse;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+
+public class ParseOWL {
+
+	public static void main(String[] args) {
+     // TODO Auto-generated method stub
+     // create the model and import owl file
+     OntModel model = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM);
+     try
+     {
+            model.read(new FileInputStream("D:\\Fruits-lite.owl"),"");
+     }
+     catch(IOException ioe)
+     {
+            System.err.println(ioe.toString());
+     }
+     //the class number
+     
+     
+		
+		
+	}
+
+}
+/*
+ 
+ 
+
+package parse;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Iterator;
+import com.hp.hpl.jena.ontology.OntClass;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.ontology.OntProperty;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+
+
+public class QueryHierarchyClassOWL
+{
+  
+  public static void main(String [] args)
+  {
+
+
+
+              OntModel model = ModelFactory.createOntologyModel( OntModelSpec.OWL_MEM, null );
+              try
+              {
+           	   model.read(new FileInputStream("D:\\Fruits.owl"),"");
+              }
+              catch(IOException ioe)
+              {
+                     System.err.println(ioe.toString());
+              }
+              
+              int j=0;
+              //list classes
+              for(Iterator i=model.listClasses();i.hasNext();)
+              {
+
+                   //the subclass string
+                  String strSub="";
+                  j++;
+              OntClass c = (OntClass) i.next();
+              String strClass1=c.getURI();
+              String strClass2=c.getLabel("zh");
+//              strClass=strClass.substring(1);
+//              if (strClass == null){
+//            	  System.out.println("kon ");
+//              }else{ 
+            	  System.out.println(j+":"+strClass1+":"+strClass2);
+
+////              
+              
+
+              //to list sub-classes for each class
+
+              for(Iterator k=c.listSubClasses(true);k.hasNext();)
+              {
+                  
+                  System.out.print("  "+"hasSubClass"+":");
+                  OntClass subclass=(OntClass)k.next();
+               
+                  //characterising a class description
+                  String strSubClass=subclass.getURI();
+                  String strSubClassLabel=subclass.getLabel("zh");
+//                  strSubClass=strSubClass.substring(1);
+                  System.out.println(strSubClass+":"+strSubClassLabel);
+//                  strSub+=strSubClass+" ";
+//                  try
+//                  {
+//                          Statement stmRelation=conn.createStatement();
+//                          String strsql="insert into relation values ('"+strClass+"','"+strSubClass+"',"+"'hasSubClass')";
+//                          stmRelation.execute(strsql);
+//                          stmRelation.close();
+//                  }
+//                  catch(Exception ex)
+//                  {
+//                          ex.printStackTrace();
+//                  }
+              }//end of class for
+          
+              
+              
+              }
+  }
+
+}
+ /*
+  
+  *
+  
+
+
+
+package parse;
+
+  
+import java.io.FileInputStream;  
+import java.util.Iterator;  
+import com.hp.hpl.jena.ontology.OntModelSpec;  
+import java.io.IOException;
+import com.hp.hpl.jena.ontology.Individual;
+import com.hp.hpl.jena.ontology.OntClass;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.ontology.*;  
+import com.hp.hpl.jena.rdf.model.*;
+
+  
+public class QueryOWL  {  
+	private static final Object StatementImpl = null;
+	public static String ns = "http://www.360iii.org/ontologies/fruit#"; 
+	
+	
+    /
+     
+     
+     
+     
+	public OntModel createOnt(String owlpath) {  
+		
+		OntModel ontModel = ModelFactory.createOntologyModel( OntModelSpec.OWL_MEM, null );
+        try
+        {
+        	ontModel.read(new FileInputStream("D:\\Fruits-lite.owl"),"");
+        }
+        catch(IOException ioe)
+        {
+               System.err.println(ioe.toString());
+        }
+        
+		return ontModel; 
+
+	}
+	
+	
+	  
+    
+	  
+    /*函数功能说明 
+     
+     
+     
+     
+       
+        public void getAllClasses(String owlpath) {  
+            OntModel ontModel = this.createOnt(owlpath);  
+            String str;  
+         
+              
+            for (Iterator allclass = ontModel.listClasses(); allclass.hasNext();) {  
+                  
+                OntClass ontclass = (OntClass) allclass.next();  
+                if(!ontclass.isAnon()){  
+                String classstr = ontclass.toString();  
+                System.out.print("类URI：" + classstr + "   ");  
+                str = classstr.substring(classstr.indexOf("#") + 1);  
+                System.out.print("类名：" + ontclass.getLabel("zh") + "   ");  
+                if (!ontclass.listSuperClasses().hasNext()) {  
+                                  
+                    System.out.println("类描述类型：无");  
+                } else {  
+                    for (Iterator supclasses = ontclass.listSuperClasses(); supclasses  
+                            .hasNext();) {  
+                        OntClass supclass = (OntClass) supclasses.next();  
+                        String supclasstr = supclass.toString();  
+                        str = supclasstr.substring(supclasstr.indexOf("#") + 1);  
+                        System.out.print("类描述类型：subClassOf   ");  
+                        System.out.println("类描述值：" + supclass.getLabel("zh"));  
+                          
+                          
+                    }  
+                }  
+                }  
+            }  
+        }  
+  
+        /
+         
+         
+         
+         
+         
+        public void getAllProperties(String owlpath) {  
+            OntModel ontMdel = this.createOnt(owlpath);  
+            String str;  
+//            OntProtyDAO dao = new OntProtyDAO();  
+              
+         
+            System.out.print("对象属性\r");  
+            for (Iterator allobjpry = ontMdel.listObjectProperties(); allobjpry  
+                    .hasNext();) {  
+  
+                OntProperty objpry = (OntProperty) allobjpry.next();  
+                  
+             
+                String objprystr = objpry.toString();  
+                System.out.print("属性URI：" + objprystr + "  ");  
+             
+//                str = objprystr.substring(objprystr.indexOf("#") + 1);  
+                System.out.print("属性值：" + objpry.getLabel("zh") + " 属性：OP ");  
+
+                try{
+                 
+                  String domain = objpry.getDomain().toString();  
+                  String domainstr = domain.substring(domain.indexOf("#") + 1);  
+                	System.out.print("定义域 ：" + objpry.getDomain().getLabel("zh"));  
+                }catch(Exception e){
+                	System.out.print("定义域 ：" + "无");  
+                }
+                
+                try{
+             
+//                String range = objpry.getRange().toString();  
+//                String rangestr = range.substring(range.indexOf("#") + 1);  
+                System.out.println("  值域：" + objpry.getRange().getLabel("zh"));  
+                }catch(Exception e){
+                	System.out.print("  值域：" + "无\n");  
+                }
+            }  
+            
+            
+         
+            System.out.print("数据属性\r");  
+            for (Iterator alldatapry = ontMdel.listDatatypeProperties(); alldatapry  
+                    .hasNext();) {  
+  
+                OntProperty datapry = (OntProperty) alldatapry.next();  
+             
+                String dataprystr = datapry.toString();  
+                System.out.print("属性URI：" + dataprystr + "  ");  
+             
+                str = dataprystr.substring(dataprystr.indexOf("#") + 1);  
+                System.out.print("属性值：" + datapry.getLabel("zh") + " 属性：DP ");  
+                
+             
+                try{
+            	String domain = datapry.getDomain().toString();  
+                String domainstr = domain.substring(domain.indexOf("#") + 1);  
+
+                System.out.print("定义域 ：" + datapry.getDomain().getLabel("zh"));  
+                    
+                }catch(NullPointerException npe){
+            	System.out.print("定义域 ：" + "无");  
+                }catch(Exception e1){
+            	System.out.print("定义域 ：" + "无"); 
+                }
+                
+             
+                try{
+                String range = datapry.getRange().toString();  
+                String rangestr = range.substring(range.indexOf("#") + 1);  
+                System.out.println("  值域：" + rangestr);  
+                System.out.println(dataprystr );  
+                System.out.println(str);  
+//                System.out.println(domainstr);  
+                System.out.println(rangestr);  
+                }catch(NullPointerException npe){
+            	System.out.print("  值域：" + "无");  
+                }catch(Exception e1){
+            	System.out.print("  值域：" + "无"); 
+                }
+            }  
+        }  
+  
+        /
+         
+         
+         
+         
+         
+        public void getAllProcharac(String owlpath) {  
+            OntModel ontMdel = this.createOnt(owlpath);  
+            String str;  
+         
+            try{
+            for (Iterator allobjpry = ontMdel.listObjectProperties(); allobjpry.hasNext();) {  
+  
+                String info = null;  
+                OntProperty objpry = (OntProperty) allobjpry.next();  
+                OntProperty objinverof = objpry.getInverseOf();  
+                  
+//                if(objinverof!=null){  
+//                info = "属性URI ："+objpry+"\n属  性  名  :"+objpry.toString().substring(objpry.toString().indexOf("#")+1)  
+//                        +"\n特征类型 :inverseOf  "+"\n特  征  值  ："+ objinverof.toString().substring(objinverof.toString().indexOf("#")+1);  
+//                System.out.println(info);  
+//                }  
+            } 
+            }catch(NullPointerException npe){
+            	System.out.print("无");  
+            }catch(Exception e1){
+        	System.out.print("无"); 
+            }
+            }  
+          
+          
+        /
+         
+         
+         
+         
+         
+        public void getAllIndividuals(String owlpath) {  
+            OntModel ontModel = this.createOnt(owlpath);  
+            String str;  
+  
+         
+            for (Iterator allIndivs = ontModel.listIndividuals(); allIndivs.hasNext();) {  
+                Individual indiv = (Individual) allIndivs.next();  
+                
+                String namespace = indiv.toString().substring(0,indiv.toString().indexOf("#") + 1);  
+             
+                OntClass classOfIndiv = indiv.getOntClass();  
+                  
+                
+                for (Iterator classPryOfIndivs = classOfIndiv.listProperties(); classPryOfIndivs.hasNext();)   
+                {  
+//                    OntProperty classPryOfIndiv = (OntProperty) classPryOfIndivs.next();  
+                    System.out.println(classPryOfIndivs.next());  
+//                    String classPryOfIndivstr = classPryOfIndiv.toString();  
+//                    String info = null;  
+//                    info = "实例URI:"  
+//                            + indiv  
+//                            + " 实例名："  
+//                            + indiv.toString().substring(indiv.toString().indexOf("#") + 1) + "  实例所属类："  
+//                            + classOfIndiv  
+//                            +" 属性URI："  
+//                            +classPryOfIndivstr;  
+//                      
+//                 
+//                    if (indiv.getPropertyValue(classPryOfIndiv) != null) {  
+//                        String pryValueOfIndiv = indiv.getPropertyValue(classPryOfIndiv).toString();  
+//                        /*判断对象属性或数据属性 
+//                         
+//                           
+//                        if (pryValueOfIndiv.contains("^^")&&pryValueOfIndiv.contains("#")) {  
+//                            info = info   
+//                                    + "  属性值："  
+//                                    + pryValueOfIndiv.substring(0, pryValueOfIndiv.indexOf("^^"));  
+//                        }else{  
+//                            info = info  
+//                                    + "  属性值："  
+//                                    + pryValueOfIndiv.substring(pryValueOfIndiv.indexOf("#") + 1);  
+//                        }  
+//                    } else {  
+//                        info = info + "   无属性值";  
+//                    }  
+//                    
+//                    System.out.println(info);  
+                }  
+          
+            }  
+  
+        }  
+        
+        
+        
+  
+        public static void main(String[] args) {  
+        	String owlpath = "D:\\Fruits-lite.owl";  
+    	
+            System.out.println("--------------------------------------------列表1    类------------------------------");  
+            new QueryOWL().getAllClasses(owlpath);  
+            System.out.println("\r\n\r\n--------------------------------------------列表2    属性-----------------------------");  
+            new QueryOWL().getAllProperties(owlpath);  
+            System.out.println("\r\n\r\n--------------------------------------------列表3   属性特征--------------------------");  
+            new QueryOWL().getAllProcharac(owlpath);  
+            System.out.println("\r\n\r\n--------------------------------------------列表4    属性约束--------------------------");  
+            new QueryOWL().getAllProcharac(owlpath);  
+            System.out.println("\r\n\r\n--------------------------------------------列表5    实例------------------------------");  
+            new QueryOWL().getAllIndividuals(owlpath);  
+              
+        }  
+  
+    }  
+/*
+ 
+ 
+
+package parse;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Iterator;
+import com.hp.hpl.jena.ontology.OntClass;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.ontology.OntProperty;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+
+
+public class QueryPropertyWithClass
+{
+  
+  public static void main(String [] args)
+  {
+
+
+
+              OntModel model = ModelFactory.createOntologyModel( OntModelSpec.OWL_MEM, null );
+              try
+              {
+           	   model.read(new FileInputStream("D:\\Fruits-lite.owl"),"");
+              }
+              catch(IOException ioe)
+              {
+                     System.err.println(ioe.toString());
+              }
+              
+              int j=0;
+              //list classes
+              for(Iterator i=model.listClasses();i.hasNext();)
+              {
+
+                   //the subclass string
+                  String strSub="";
+                  j++;
+              OntClass c = (OntClass) i.next();
+              String strClass1=c.getURI();
+              String strClass2=c.getLabel("zh");
+//              strClass=strClass.substring(1);
+//              if (strClass == null){
+//            	  System.out.println("kon ");
+//              }else{ 
+            	  System.out.println(j+":"+strClass1+":"+strClass2);
+
+////              
+              
+
+//              //to list sub-classes for each class
+//
+//              for(Iterator k=c.listSubClasses(true);k.hasNext();)
+//              {
+//                  
+//                  System.out.print("  "+"hasSubClass"+":");
+//                  OntClass subclass=(OntClass)k.next();
+//               
+//                  //characterising a class description
+//                  String strSubClass=subclass.getURI();
+//                  String strSubClassLabel=subclass.getLabel("zh");
+////                  strSubClass=strSubClass.substring(1);
+//                  System.out.println(strSubClass+":"+strSubClassLabel);
+////                  strSub+=strSubClass+" ";
+////                  try
+////                  {
+////                          Statement stmRelation=conn.createStatement();
+////                          String strsql="insert into relation values ('"+strClass+"','"+strSubClass+"',"+"'hasSubClass')";
+////                          stmRelation.execute(strsql);
+////                          stmRelation.close();
+////                  }
+////                  catch(Exception ex)
+////                  {
+////                          ex.printStackTrace();
+////                  }
+//              }//end of class for
+          
+              
+              
+              
+              //list property for each class
+              for(Iterator y=c.listDeclaredProperties(true);y.hasNext();)
+              {
+                    
+                     OntProperty property=(OntProperty)y.next();
+                     
+                 
+                     String strPropertyURI=property.getURI();        
+                     String strPropertyName=property.getLabel("zh");
+
+                      String strRangeName="";
+                       try {
+                    	 if (property.getRange()!=null) {
+                    		 strRangeName = property.getRange().getLabel("zh");
+                    		 
+                             
+                    	 }
+                      } catch (NullPointerException e){
+                    	  strRangeName  ="空";
+                    
+                      }
+   
+                       
+                       if(strPropertyName.equals("有出售价格"))
+                       {
+                           System.out.print("  ");
+                           System.out.print(strPropertyURI+strPropertyName+"\r\n"); 
+                           System.out.println("\r\n"+strRangeName);
+
+                       }
+
+                     
+                   
+
+                           
+
+
+
+              }
+              }     
+  }
+}
+package parse;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.util.List; 
+ 
+ 
+import com.hp.hpl.jena.query.Query; 
+import com.hp.hpl.jena.query.QueryExecution; 
+import com.hp.hpl.jena.query.QueryExecutionFactory; 
+import com.hp.hpl.jena.query.QueryFactory; 
+import com.hp.hpl.jena.query.QuerySolution; 
+import com.hp.hpl.jena.rdf.model.Model; 
+import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.util.FileManager;
+import com.hp.hpl.jena.util.iterator.WrappedIterator; 
+
+
+
+public class QueryTester { 
+ 
+ public static void main(final String[] args) throws Exception { 
+  // String qry = 
+  // "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> SELECT  (sum(?x) as ?y) WHERE { [] <http://example.com/int> ?x1 . bind( xsd:integer(?x1) as ?x) }"; 
+  final Model m = ModelFactory.createDefaultModel(); 
+  
+  String filename = "D:\\Fruits-lite.owl"; 
+		  
+  InputStream in = FileManager.get().open(filename); 
+  
+  if (in == null) 
+	    throw new IllegalArgumentException("File: "+filename+" not found"); 
+  
+  m.read(in, null); 
+  
+   Property d = m.createProperty( "http://example.com/double"); 
+   Property i = m.createProperty( "http://example.com/int"); 
+   m.add( m.createResource("http://example.com/A"), d, 
+   m.createTypedLiteral(-1.3) ); 
+   m.add( m.createResource("http://example.com/A"), i, 
+   m.createTypedLiteral(-3) ); 
+   m.add( m.createResource("http://example.com/B"), d, 
+   m.createTypedLiteral(1.5) ); 
+   m.add( m.createResource("http://example.com/B"), i, 
+   m.createTypedLiteral(5) ); 
+   m.add( m.createResource("http://example.com/C"), d, 
+   m.createTypedLiteral(1.7) ); 
+   m.add( m.createResource("http://example.com/C"), i, "7" ); 
+  
+  
+//  public static void main(String args[]) 
+//  { 
+//   String filename = "D:\\Fruits-lite.owl"; 
+//    
+//   // Create an empty model 
+//   Model model = ModelFactory.createDefaultModel(); 
+//      
+//   // Use the FileManager to find the input file 
+//   InputStream in = FileManager.get().open(filename); 
+//  
+//   if (in == null) 
+//    throw new IllegalArgumentException("File: "+filename+" not found"); 
+//  
+//   // Read the RDF/XML file 
+//   model.read(in, null); 
+//  
+  
+  
+  
+  
+  final Query q = QueryFactory.create(qry); 
+  final QueryExecution qexec = QueryExecutionFactory.create(q, m); 
+  final List<QuerySolution> retval = WrappedIterator.create( 
+    qexec.execSelect()).toList(); 
+  for (final QuerySolution qs : retval) { 
+   System.out.println(qs); 
+  } 
+ } 
+ 
+// static URL fUrl = J4SConnectionTest.class 
+//   .getResource("./J4SStatementTest.ttl"); 
+
+ 
+ 
+static String qry = "SELECT ?o  WHERE {?s ?p ?o }";
+ 
+ 
+// static String qry = "SELECT  
+//   + "   WHERE" 
+//   + "     { { { { ?fooTable <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.com/jdbc4sparql#fooTable> ." 
+//   + "             ?fooTable <http://example.com/jdbc4sparql#IntCol> ?v_b3f2fd82_c102_3c4d_baed_5958c464a424 ." 
+//   + "             ?fooTable <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?v_599dcce2_998a_3b40_b1e3_8e8c6006cb0a ." 
+//   + "             ?fooTable <http://example.com/jdbc4sparql#StringCol> ?v_f20fd591_2dfa_3a09_b81b_7c6f31cc3159" 
+//   + "           }" 
+//   + "           OPTIONAL" 
+//   + "             { ?fooTable <http://example.com/jdbc4sparql#NullableStringCol> ?v_2ca911d9_9e97_3d80_aaae_d6347f341e4e}" 
+//   + "           OPTIONAL" 
+//   + "             { ?fooTable <http://example.com/jdbc4sparql#NullableIntCol> ?v_ce84b044_b71d_37a4_bc63_462bd432993c}" 
+//   + "         }" 
+//   + "    BIND((?v_b3f2fd82_c102_3c4d_baed_5958c464a424) AS ?IntCol)" 
+//   + "        BIND((?v_ce84b044_b71d_37a4_bc63_462bd432993c) AS ?NullableIntCol)" 
+//   + "        BIND((?v_599dcce2_998a_3b40_b1e3_8e8c6006cb0a) AS ?type)" 
+//   + "        BIND((?v_f20fd591_2dfa_3a09_b81b_7c6f31cc3159) AS ?StringCol)" 
+//   + "        BIND((?v_2ca911d9_9e97_3d80_aaae_d6347f341e4e) AS ?NullableStringCol)" 
+//   + "       }" + "     }"; 
+}
+
+package com.ontology;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+
+import org.apache.jena.ontology.AnnotationProperty;
+import org.apache.jena.ontology.DatatypeProperty;
+import org.apache.jena.ontology.HasValueRestriction;
+import org.apache.jena.ontology.Individual;
+import org.apache.jena.ontology.IntersectionClass;
+import org.apache.jena.ontology.MaxCardinalityRestriction;
+import org.apache.jena.ontology.MinCardinalityRestriction;
+import org.apache.jena.ontology.ObjectProperty;
+import org.apache.jena.ontology.OntClass;
+import org.apache.jena.ontology.OntModel;
+import org.apache.jena.ontology.OntModelSpec;
+import org.apache.jena.ontology.Restriction;
+import org.apache.jena.ontology.SomeValuesFromRestriction;
+import org.apache.jena.rdf.model.Literal;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.OWL;
+import org.apache.jena.vocabulary.OWL2;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.apache.jena.vocabulary.XSD;
+
+/****************
+
+ ****************/
+
+
+public class SC_Ontology {
+	
+	
+	/****************
+
+	 ****************/
+
+	public OntModel createOntology(){
+		OntModel m = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM);
+		return m;
+	}
+	
+	/**************** 
+	 * @return *
+	 ****************/
+
+	public OntModel readOntology(String file){
+		OntModel m = createOntology();
+		m.read(file);
+		return m;
+	}
+	
+	/****************
+	 * @return *
+	 ****************/
+
+	public String addClass(OntModel m,String NP, String class1, String class2, String impvalue){
+		
+		int tmp = 0;
+		for(Iterator<OntClass> allclass = m.listClasses(); allclass.hasNext();){
+			OntClass c = allclass.next();
+			if(class2.equals(c.getLocalName())){
+				tmp = 1;
+			}
+		}
+		if (tmp == 0){
+			OntClass news1 = m.createClass(NP+class2);
+			if(!class1.equals("null")){
+
+				OntClass adds1 = m.getOntClass(NP+class1);
+
+				news1.addSuperClass(adds1);
+			}
+
+			news1.addLabel(class2, "zh");
+			// 向其中加入imp
+			if (m.getAnnotationProperty(NP+"imp") == null){
+				m.createAnnotationProperty(NP+"imp");
+			}
+			AnnotationProperty imp = m.getAnnotationProperty(NP+"imp");
+			Literal da = m.createTypedLiteral(impvalue,"xsd:positiveInteger");
+			news1.addLiteral(imp, da);
+			return class2 + ":添加成功";
+		}
+		else{
+			return class2 + ":该类已存在";
+		}
+		
+	}
+	
+	/****************     
+	 * @return 
+	 * @return *
+	 ****************/
+	public String addInstance(OntModel m, String NP, String class1, String instance, String impvalue){
+
+		int tmp = 0;
+		for(Iterator<Individual> allclass = m.listIndividuals(); allclass.hasNext();){
+			Individual c = allclass.next();
+			if(instance.equals(c.getLocalName())){
+				tmp = 1;
+			}
+		}
+		if(tmp == 0){
+			m.listIndividuals();
+
+			OntClass adds1 = m.getOntClass(NP + class1);
+
+			Individual in = m.createIndividual(NP + instance, adds1);
+			AnnotationProperty imp = m.getAnnotationProperty(NP+"imp");
+			Literal da = m.createTypedLiteral(impvalue,"xsd:positiveInteger");
+			in.addLiteral(imp, da);
+			//Individual in = m.createIndividual(NP + instance, adds1);
+
+			in.addLabel(instance, "zh");
+			return instance + ":实例添加成功";
+		}
+		else{
+			return instance + ":该实例已存在";
+		}
+	}
+	
+	/**************************
+	@return
+	 **************************/
+
+	public void addRestriction(OntModel m, String NP, String subject, String property, String object){
+
+		OntClass adds1 = m.getOntClass(NP + subject);
+
+		Property addp1 = m.getProperty(NP + property);
+
+		Individual addo1 = m.getIndividual(NP + object);
+
+		HasValueRestriction avf = m.createHasValueRestriction(null, addp1, addo1);
+
+		adds1.addSuperClass(avf);
+		
+	}
+	
+
+		public void addInstanceRestriction(OntModel m, String NP, String subject, String property, String object){
+
+			Individual adds1 = m.getIndividual(NP + subject);
+
+			Property addp1 = m.getProperty(NP + property);
+
+			Individual addo1 = m.getIndividual(NP + object);
+			adds1.addProperty(addp1, addo1);
+
+			//adds1.addLiteral(addp1, avf);
+			
+		}
+	
+	/************************** 
+	 * @return 
+	 **************************/
+
+	public String addProperty(OntModel m, String NP, String subproperty, String property, String cate){
+
+		int tmp = 0;
+
+		for(Iterator<ObjectProperty> allObjectProperties = m.listObjectProperties(); allObjectProperties.hasNext();){
+			ObjectProperty c = allObjectProperties.next();
+			if(property.equals(c.getLocalName())){
+				tmp = 1;
+			}
+		}
+
+		for(Iterator<DatatypeProperty> allDatatypeProperties = m.listDatatypeProperties(); allDatatypeProperties.hasNext();){
+			DatatypeProperty c = allDatatypeProperties.next();
+			if(property.equals(c.getLocalName())){
+				tmp = 1;
+			}
+		}
+		if(tmp == 0){
+
+			if (cate.equals("ob")){
+
+				ObjectProperty pro1 = m.createObjectProperty(NP + property);
+				// 添加label
+				pro1.addLabel(property, "zh");
+
+				if (!subproperty.equals("NULL")){
+					pro1.addSuperProperty(m.getObjectProperty(NP + subproperty));
+				}
+			}else if (cate.equals("da")){
+
+				DatatypeProperty pro1 = m.createDatatypeProperty(NP + property);
+
+				pro1.addLabel(property, "zh");
+
+				if (!subproperty.equals("NULL")){
+					pro1.addSuperProperty(m.getObjectProperty(NP + subproperty));
+				}
+				
+			}else{ System.out.println("属性类型错误"); }
+			return property + ":属性添加成功";
+		}else{
+			return property + ":该属性已存在";
+		}
+	}
+	
+	/**************************
+	 *       
+	 * @return 
+	 **************************/
+	public void delClass(OntModel m, String NP, String class1){
+
+		OntClass adds1 = m.getOntClass(NP + class1);
+		adds1.remove();
+	}
+	
+	public static void main(String[] args) throws Exception {
+		// TODO Auto-generated method stub
+		
+		/*****************
+		 * @return *
+		 *****************/
+		
+
+		String tempstr = null;
+		File inFile = new File("./datas/处理结果.txt");
+		FileInputStream input01 = new FileInputStream(inFile);
+		BufferedReader br01=new BufferedReader(new InputStreamReader(input01));
+
+		ArrayList<String[]> word02 = new ArrayList<String[]>();
+		while((tempstr=br01.readLine())!=null){
+			word02.add(tempstr.split("\t"));
+		}
+		br01.close();
+		
+
+
+		SC_Ontology ontology = new SC_Ontology();
+
+		OntModel m = ontology.readOntology("./datas/qinyinChild.owl");
+
+		String NP = "http://qieyin/ontologies/child#";
+
+		for(String[] str01 : word02){
+			System.out.println(str01[0]+"v"+str01[1]+"v"+str01[2]);
+			ontology.addClass(m,NP, str01[0], str01[1], str01[2]);
+		}
+			
+		
+		/**********************
+		 *  *
+		 **********************/
+
+		File newFile = new File("./datas/qieyinChild02.owl");
+		FileOutputStream output = new FileOutputStream(newFile);
+		m.write(output);
+		output.close();
+		System.out.println("操作完成");
+		
+		
+		
+
+	}
+
+}
